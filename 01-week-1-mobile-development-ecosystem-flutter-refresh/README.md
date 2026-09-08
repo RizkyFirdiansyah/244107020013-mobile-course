@@ -29,13 +29,13 @@ Dokumentasi tugas dan praktikum minggu ke-1 mata kuliah Pemrograman Mobile. Foku
 
 Tampilan awal praktikum mengubah UI default menjadi profil sederhana yang menampilkan ikon, nama, dan deskripsi tugas.
 
-![Hasil Praktikum 1](screenshots/praktikum-1.jpg)
+![Hasil Praktikum 1](screenshots/praktikum-1.jpeg)
 
 ### 2. Hasil Mini Assignment
 
 Pengembangan dari tampilan awal dengan menambahkan informasi identitas lengkap seperti **NIM (244107020013)** serta informasi kelas dan nomor absen (**Kelas 2E, Absen 15**).
 
-![Hasil Mini Assignment](screenshots/mini-assignment.jpg)
+![Hasil Mini Assignment](screenshots/mini-assignment.jpeg)
 
 ---
 
