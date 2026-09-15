@@ -23,7 +23,9 @@ class _DashboardAppState extends State<DashboardApp> {
         brightness: Brightness.dark,
         colorSchemeSeed: Colors.indigo,
       ),
-      themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
+      // themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
+      // themeMode: ThemeMode.dark,
+      themeMode: ThemeMode.system,
       home: DashboardPage(
         isDark: isDark,
         onDarkChanged: (value) => setState(() => isDark = value),
@@ -59,7 +61,7 @@ class DashboardPage extends StatelessWidget {
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
-          final columns = constraints.maxWidth >= 380 ? 2 : 1;
+          final columns = constraints.maxWidth >= 700 ? 2 : 1;
           return GridView.count(
             padding: const EdgeInsets.all(16),
             crossAxisCount: columns,
