@@ -9,9 +9,7 @@ class ProfileApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return const MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: Scaffold(
-        body: Center(child: ProfileCard()),
-      ),
+      home: Scaffold(body: Center(child: ProfileCard())),
     );
   }
 }
@@ -29,7 +27,7 @@ class ProfileCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.max,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
@@ -39,8 +37,10 @@ class ProfileCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: const [
-                    Text('Nama Mahasiswa',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text(
+                      'Nama Mahasiswa',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     Text('Muhammad Rizky Firdiansyah, S.Tr.Kom.'),
                   ],
                 ),
@@ -48,14 +48,24 @@ class ProfileCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          const Row(children: [
-            Expanded(child: Text('NIM')),
-            Text('244107020013'),
-          ]),
-          const Row(children: [
-            Expanded(child: Text('Kelas')),
-            Text('TI-3E'),
-          ]),
+          const Row(
+            children: [
+              Expanded(child: Text('NIM')),
+              Text('244107020013'),
+            ],
+          ),
+          const Row(
+            children: [
+              Expanded(child: Text('Kelas')),
+              Text('TI-3E'),
+            ],
+          ),
+          const Row(
+            children: [
+              Expanded(child: Text('Email')),
+              Text('mr.frdsyh@gmail.com'),
+            ],
+          ),
         ],
       ),
     );
