@@ -29,14 +29,14 @@ class ProfileCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize: MainAxisSize.max,
         children: [
           Row(
             children: [
               const CircleAvatar(child: Icon(Icons.person)),
               const SizedBox(width: 12),
-              // Expanded(
-                Column(
+              Expanded(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: const [
                     Text('Nama Mahasiswa',
@@ -44,7 +44,7 @@ class ProfileCard extends StatelessWidget {
                     Text('Muhammad Rizky Firdiansyah, S.Tr.Kom.'),
                   ],
                 ),
-              // ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
