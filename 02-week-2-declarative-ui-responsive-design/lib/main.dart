@@ -53,8 +53,12 @@ class DashboardPage extends StatelessWidget {
             children: [
               Icon(isDark ? Icons.dark_mode : Icons.light_mode),
               const SizedBox(width: 4),
-              CupertinoSwitch(value: isDark, onChanged: onDarkChanged),
-              const SizedBox(width: 12),
+              Semantics(
+                label: 'Pengatur Tema Mode Gelap',
+                hint: 'Ketuk untuk mengaktifkan atau menonaktifkan mode gelap',
+                toggled: isDark,
+                child: CupertinoSwitch(value: isDark, onChanged: onDarkChanged),
+              ),
             ],
           ),
         ],
@@ -88,14 +92,19 @@ class DashboardCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          children: [
-            Expanded(child: Text(title)),
-            Text(value, style: Theme.of(context).textTheme.headlineSmall),
-          ],
+    return Semantics(
+      label: 'Kartu Informasi $title',
+      value: value,
+      container: true, 
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            children: [
+              Expanded(child: Text(title)),
+              Text(value, style: Theme.of(context).textTheme.headlineSmall),
+            ],
+          ),
         ),
       ),
     );
