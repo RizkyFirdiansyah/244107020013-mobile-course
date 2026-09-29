@@ -8,34 +8,36 @@ class TodoPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final todos = ref.watch(todoListProvider);
+    // Membaca dari provider yang sudah difilter
+    final todos = ref.watch(filteredTodosProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('ToDo Riverpod')),
+      appBar: AppBar(
+        title: const Text('ToDo Riverpod'),
+        actions: [
+          PopupMenuButton(
+            onSelected: (filter) =>
+                ref.read(todoFilterProvider.notifier).setFilter(filter),
+            itemBuilder: (context) => const [
+              PopupMenuItem(value: TodoFilter.all, child: Text('Semua')),
+              PopupMenuItem(
+                value: TodoFilter.active,
+                child: Text('Belum Selesai'),
+              ),
+              PopupMenuItem(
+                value: TodoFilter.completed,
+                child: Text('Selesai'),
+              ),
+            ],
+            icon: const Icon(Icons.filter_list),
+          ),
+        ],
+      ),
       body: todos.isEmpty
-          ? const Center(child: Text('Belum ada tugas'))
+          ? const Center(child: Text('Tidak ada tugas di kategori ini'))
           : ListView.builder(
               itemCount: todos.length,
-              itemBuilder: (context, index) => ListTile(
-                leading: Checkbox(
-                  value: todos[index].done,
-                  onChanged: (_) =>
-                      ref.read(todoListProvider.notifier).toggle(index),
-                ),
-                title: Text(
-                  todos[index].title,
-                  style: TextStyle(
-                    decoration: todos[index].done
-                        ? TextDecoration.lineThrough
-                        : null,
-                  ),
-                ),
-                trailing: IconButton(
-                  icon: const Icon(Icons.delete),
-                  onPressed: () =>
-                      ref.read(todoListProvider.notifier).remove(index),
-                ),
-              ),
+              itemBuilder: (context, index) => TodoTile(todo: todos[index]),
             ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddDialog(context, ref),
@@ -66,6 +68,34 @@ class TodoPage extends ConsumerWidget {
             child: const Text('Tambah'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// WIDGET TILE YANG DIEKSTRAK
+
+class TodoTile extends ConsumerWidget {
+  const TodoTile({required this.todo, super.key});
+
+  final Todo todo;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ListTile(
+      leading: Checkbox(
+        value: todo.done,
+        onChanged: (_) => ref.read(todoListProvider.notifier).toggle(todo.id),
+      ),
+      title: Text(
+        todo.title,
+        style: TextStyle(
+          decoration: todo.done ? TextDecoration.lineThrough : null,
+        ),
+      ),
+      trailing: IconButton(
+        icon: const Icon(Icons.delete),
+        onPressed: () => ref.read(todoListProvider.notifier).remove(todo.id),
       ),
     );
   }
