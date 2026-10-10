@@ -8,6 +8,7 @@ import 'models/comment.dart';
 import 'models/post.dart';
 import 'repositories/comment_repository.dart';
 import 'repositories/post_repository.dart';
+import 'paged_posts.dart';
 
 final dioProvider = Provider<Dio>((ref) => createDio());
 
@@ -150,42 +151,27 @@ Future<Object?> readPostsErrorOnce(ProviderContainer container) {
   return completer.future.whenComplete(sub.close);
 }
 
-String friendlyErrorMessage(Object error) {
-  if (error is DioException) {
-    switch (error.type) {
-      /// Timeout errors: connectionTimeout, sendTimeout, receiveTimeout
-      /// Penyebab: koneksi lambat atau server tidak merespons dalam 10 detik
-      case DioExceptionType.connectionTimeout:
-      case DioExceptionType.sendTimeout:
-      case DioExceptionType.receiveTimeout:
-        return 'Koneksi lambat atau timeout. Periksa internet Anda lalu coba lagi.';
+class PostDetailNotifier extends AsyncNotifier<Post> {
+  PostDetailNotifier(this.postId);
 
-      /// Connection error: tidak bisa reach server sama sekali
-      /// Penyebab: WiFi/data mati, DNS error, atau server offline
-      case DioExceptionType.connectionError:
-        return 'Tidak dapat terhubung ke server. Periksa internet Anda.';
+  final int postId;
 
-      /// Bad response: server merespons tapi dengan HTTP error code
-      /// Pemetaan: 404 not found, 401/403 forbidden, 500+ server error
-      case DioExceptionType.badResponse:
-        final code = error.response?.statusCode;
-        if (code == 404) {
-          return 'Data tidak ditemukan (404).';
-        }
-        if (code == 401 || code == 403) {
-          return 'Akses ditolak ($code). Periksa kredensial Anda.';
-        }
-        if (code != null && code >= 500) {
-          return 'Server bermasalah ($code). Coba lagi nanti.';
-        }
-        return 'Server bermasalah ($code). Coba lagi nanti.';
-
-      /// Unknown error: tipe error lain yang tidak terpetakan
-      default:
-        return 'Terjadi kesalahan jaringan. Coba lagi.';
+  @override
+  Future<Post> build() async {
+    Post? loadedPost;
+    for (final post in ref.read(pagedPostsProvider).items) {
+      if (post.id == postId) {
+        loadedPost = post;
+        break;
+      }
     }
+    if (loadedPost != null) return loadedPost;
+    return ref.read(postRepositoryProvider).fetchPost(postId);
   }
-
-  /// Non-DioException: error dari sumber lain (parsing, logic, dll)
-  return 'Terjadi kesalahan tak terduga: $error';
 }
+
+final postDetailProvider =
+    AsyncNotifierProvider.family<PostDetailNotifier, Post, int>(
+  PostDetailNotifier.new,
+  retry: (retryCount, error) => null,
+);

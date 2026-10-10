@@ -1,50 +1,56 @@
-# Week 4 - Repository Layer Comments
+# Week 4 - REST API Refactoring
 
-Implementasi ini mengambil komentar JSONPlaceholder melalui:
+Project ini menggunakan JSONPlaceholder melalui repository, Dio client
+terpusat, dan Riverpod.
 
-`GET https://jsonplaceholder.typicode.com/comments?postId={id}`
+## Perubahan refactoring
 
-## Struktur kode
+- [`PostTile`](lib/widgets/post_tile.dart) mengekstrak baris post yang dapat
+  digunakan halaman list biasa maupun pagination. Tile menerima callback
+  `onTap` untuk navigasi ke detail.
+- [`network_errors.dart`](lib/data/network_errors.dart) menjadi satu sumber
+  `friendlyErrorMessage` untuk halaman paged, non-paged, detail, dan provider
+  lain.
+- [`router.dart`](lib/router.dart) memakai GoRouter dengan route `/` dan
+  `/post/:id`.
+- [`PostDetailPage`](lib/pages/post_detail_page.dart) menampilkan `title` dan
+  `body` lengkap. `postDetailProvider` mencari post yang sudah dimuat di state
+  pagination terlebih dahulu, lalu memanggil `PostRepository.fetchPost` bila
+  post belum tersedia, termasuk saat route detail dibuka langsung.
+- Akses HTTP tetap berada di repository. Widget hanya berkomunikasi dengan
+  provider dan tidak membuat atau memanggil Dio secara langsung.
 
-- `lib/data/api_client.dart` membuat satu instance `Dio` dengan `baseUrl`,
-  header JSON, dan timeout koneksi/penerimaan 10 detik.
-- `lib/data/models/comment.dart` berisi model `Comment`. `fromJson` memeriksa
-  tipe nilai sebelum mengonversi angka dan memakai nilai default untuk field
-  yang hilang atau `null`.
-- `lib/data/repositories/comment_repository.dart` berisi satu-satunya kode
-  yang memanggil endpoint comments. Repository menerima `Dio` melalui
-  dependency injection dan meneruskan `postId` sebagai query parameter.
-- `lib/data/providers.dart` menyediakan `commentRepositoryProvider` dan
-  `commentsProvider`, sebuah `AsyncNotifierProvider.family`. Exception dari
-  repository otomatis menjadi `AsyncError`; `friendlyErrorMessage` mengubah
-  error jaringan menjadi pesan yang dapat dipahami pengguna.
-- `test/comment_model_test.dart` menguji parsing normal, field yang hilang,
-  object JSON kosong, nilai `null`, konversi angka, dan ketidaksesuaian tipe.
+## Perilaku state
+
+| Area | Loading | Error | Empty | Success |
+|---|---|---|---|---|
+| Post list | `CircularProgressIndicator` | pesan ramah + tombol coba lagi | pesan data kosong | daftar `PostTile` |
+| Pagination | indikator di bagian bawah | pesan ramah + tombol coba lagi saat halaman pertama gagal | daftar kosong dengan state awal | item bertambah saat scroll, lalu `Semua data termuat.` |
+| Detail post | `CircularProgressIndicator` | pesan ramah + tombol coba lagi | tidak berlaku untuk satu post | title dan body lengkap |
+
+Pagination mencegah request ganda dengan guard `isLoadingMore` dan berhenti
+ketika response terakhir berisi kurang dari limit. Detail post menggunakan
+provider family sehingga setiap `id` mempunyai state sendiri.
 
 ## Hasil verifikasi
 
-| Checklist | Hasil |
-|---|---|
-| UI memanggil Dio langsung? | Tidak. UI memakai provider, provider memakai `CommentRepository`, dan repository memakai `Dio`. |
-| `fromJson` aman untuk `null` dan field hilang? | Ya. Semua field memiliki fallback (`0` atau string kosong), dan tipe numeric/string diperiksa sebelum cast. |
-| Semua tipe timeout dipetakan? | Ya. `connectionTimeout`, `sendTimeout`, dan `receiveTimeout` menghasilkan pesan timeout. |
-| `connectionError` dipetakan? | Ya. Pesan meminta pengguna memeriksa koneksi internet. |
-| `badResponse` 404 dan 500 dipetakan? | Ya. 404 menghasilkan pesan data tidak ditemukan; 500 dan status server lain menghasilkan pesan server bermasalah. |
-| `baseUrl` dan timeout terpusat? | Ya. Konfigurasi utama berada di `createDio()`; repository juga menetapkan batas `sendTimeout` dan `receiveTimeout` 10 detik untuk request comments. |
-| Test benar-benar menguji field hilang? | Ya. Test mencakup field hilang satu per satu dan object JSON kosong, serta edge case tipe salah. |
-| `flutter analyze` | Berhasil tanpa warning/error setelah perbaikan parsing dan import. |
-| `flutter test` | Unit test model Comment berhasil dijalankan dan memverifikasi seluruh kasus di atas. |
+- **UI tidak memanggil Dio langsung:** terverifikasi. Pemanggilan HTTP hanya
+  ada di `api_client.dart` dan repository; UI memakai provider.
+- **Empat state:** halaman non-paged, paged, dan detail memiliki cabang
+  loading/error/empty atau success yang sesuai. Error menyediakan retry.
+- **Pagination:** `loadNextPage` mengembalikan lebih awal saat sedang memuat
+  atau data sudah habis; indikator akhir ditampilkan.
+- **Detail route:** `/post/:id` memakai data pagination yang sudah tersedia,
+  dengan fallback ke `fetchPost(id)` untuk deep link.
+- **`flutter analyze`:** berhasil tanpa issue.
+- **`flutter test`:** seluruh test berhasil.
 
-## Contoh penggunaan provider
+Perintah verifikasi:
 
-```dart
-final comments = ref.watch(commentsProvider(postId));
+```text
+flutter analyze --no-pub
+No issues found!
 
-return comments.when(
-  loading: () => const CircularProgressIndicator(),
-  error: (error, _) => Text(friendlyErrorMessage(error)),
-  data: (items) => ListView(
-    children: items.map((comment) => Text(comment.body)).toList(),
-  ),
-);
+flutter test
+All tests passed!
 ```
