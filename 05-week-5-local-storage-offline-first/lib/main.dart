@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'data/local/database_factory.dart';
+import 'pages/note_detail_page.dart';
 import 'pages/notes_page.dart';
 import 'pages/posts_page.dart';
 import 'pages/settings_page.dart';
@@ -12,19 +14,47 @@ Future<void> main() async {
   runApp(const MyApp());
 }
 
+final appRouterProvider = Provider<GoRouter>((ref) {
+  return GoRouter(
+    routes: [
+      GoRoute(
+        path: '/',
+        builder: (context, state) => const HomePage(),
+      ),
+      GoRoute(
+        path: '/note/:id',
+        builder: (context, state) {
+          final id = int.tryParse(state.pathParameters['id'] ?? '');
+          if (id == null) return const NoteDetailPage(noteId: -1);
+          return NoteDetailPage(noteId: id);
+        },
+      ),
+    ],
+  );
+});
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return ProviderScope(
-      child: MaterialApp(
-        title: 'Offline-first Notes',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
-        ),
-        home: const HomePage(),
+    return const ProviderScope(
+      child: AppRouterView(),
+    );
+  }
+}
+
+class AppRouterView extends ConsumerWidget {
+  const AppRouterView({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return MaterialApp.router(
+      title: 'Offline-first Notes',
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
       ),
+      routerConfig: ref.watch(appRouterProvider),
     );
   }
 }

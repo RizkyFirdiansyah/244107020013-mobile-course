@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/local/note.dart';
 import '../data/repositories/note_repository.dart';
 import '../data/sync.dart';
+import '../widgets/note_tile.dart';
 
 final noteRepositoryProvider = Provider<NoteRepository>(
   (ref) => NoteRepository(),
@@ -68,6 +69,31 @@ class NotesPage extends ConsumerWidget {
     }
   }
 
+  Future<void> _deleteNote(BuildContext context, WidgetRef ref, Note note) async {
+    if (note.id == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Hapus catatan?'),
+        content: Text('Catatan "${note.title}" akan dihapus dari perangkat.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await ref.read(noteRepositoryProvider).deleteNote(note.id!);
+    ref.invalidate(notesProvider);
+    ref.invalidate(dirtyNotesCountProvider);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final notes = ref.watch(notesProvider);
@@ -83,15 +109,9 @@ class NotesPage extends ConsumerWidget {
                 itemCount: items.length,
                 itemBuilder: (context, index) {
                   final note = items[index];
-                  return ListTile(
-                    leading: Icon(
-                      note.dirty ? Icons.cloud_upload : Icons.cloud_done,
-                      color: note.dirty ? Colors.orange : Colors.green,
-                    ),
-                    title: Text(note.title),
-                    subtitle: Text(
-                      note.dirty ? 'Menunggu sinkronisasi' : 'Tersinkron',
-                    ),
+                  return NoteTile(
+                    note: note,
+                    onDelete: () => _deleteNote(context, ref, note),
                   );
                 },
               ),
