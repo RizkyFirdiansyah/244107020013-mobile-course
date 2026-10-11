@@ -12,10 +12,12 @@ final noteRepositoryProvider = Provider<NoteRepository>(
 
 final notesProvider = FutureProvider<List<Note>>(
   (ref) => ref.watch(noteRepositoryProvider).fetchNotes(),
+  retry: (retryCount, error) => null,
 );
 
 final dirtyNotesCountProvider = FutureProvider<int>(
   (ref) => ref.watch(noteRepositoryProvider).countDirty(),
+  retry: (retryCount, error) => null,
 );
 
 class NotesPage extends ConsumerWidget {
@@ -69,7 +71,11 @@ class NotesPage extends ConsumerWidget {
     }
   }
 
-  Future<void> _deleteNote(BuildContext context, WidgetRef ref, Note note) async {
+  Future<void> _deleteNote(
+    BuildContext context,
+    WidgetRef ref,
+    Note note,
+  ) async {
     if (note.id == null) return;
     final confirmed = await showDialog<bool>(
       context: context,
