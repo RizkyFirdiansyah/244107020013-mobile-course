@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import 'api_errors.dart';
 import 'auth_repository.dart';
 import 'token_store.dart';
 
@@ -17,7 +18,9 @@ Dio buildApiClient(TokenStore store, AuthRepository auth) {
       onError: (e, handler) async {
         if (e.response?.statusCode == 401) {
           final refresh = await store.readRefresh();
-          if (refresh == null) return handler.next(e);
+          if (refresh == null) {
+            return handler.reject(e.copyWith(message: apiErrorMessage(e)));
+          }
           try {
             final renewed = await auth.refresh(refresh);
             await store.save(access: renewed, refresh: refresh);
@@ -29,7 +32,7 @@ Dio buildApiClient(TokenStore store, AuthRepository auth) {
             await store.clear(); // refresh ikut mati -> paksa login ulang
           }
         }
-        handler.next(e);
+        handler.reject(e.copyWith(message: apiErrorMessage(e)));
       },
     ),
   );

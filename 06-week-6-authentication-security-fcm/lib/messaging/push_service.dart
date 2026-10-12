@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import '../routes.dart';
 
 final pendingDeepLinkNotifier = ValueNotifier<String?>(null);
 String? pendingDeepLink;
@@ -107,8 +108,8 @@ class PushService {
   }
 
   static String? _routeFromData(Map<String, dynamic> data) {
-    final route = data['route'] ?? data['deep_link'];
-    return route is String && route.isNotEmpty ? route : null;
+    final route = routeFromMessage(data);
+    return route == AppRoutes.home ? null : route;
   }
 
   static void _setRouteFromMessage(RemoteMessage? message) {

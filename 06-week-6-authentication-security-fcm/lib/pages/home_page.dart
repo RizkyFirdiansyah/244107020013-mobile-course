@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../messaging/push_service.dart';
 import '../providers/auth_provider.dart';
+import '../routes.dart';
 
 const _announcements = [
   (
@@ -96,7 +97,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                     ),
                     isThreeLine: true,
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push('/pengumuman/${announcement.id}'),
+                    onTap: () =>
+                        context.push(AppRoutes.announcement(announcement.id)),
                   ),
                 ),
               if (_tokenPreview != null) ...[

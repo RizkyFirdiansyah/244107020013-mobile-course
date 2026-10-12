@@ -13,6 +13,7 @@ import 'pages/home_page.dart';
 import 'pages/login_page.dart';
 import 'providers/auth_provider.dart';
 import 'data/api_client.dart';
+import 'routes.dart';
 
 final container = ProviderContainer();
 final fcmTokenProvider = StateProvider<String?>((ref) => null);
@@ -29,21 +30,21 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final deepLink = pendingDeepLinkNotifier.value;
       final loggedIn = authState.value ?? false;
-      final goingLogin = state.matchedLocation == '/login';
+      final goingLogin = state.matchedLocation == AppRoutes.login;
       if (loggedIn && deepLink != null && deepLink != state.matchedLocation) {
         pendingDeepLinkNotifier.value = null;
         pendingDeepLink = null;
         return deepLink;
       }
-      if (!loggedIn && !goingLogin) return '/login';
-      if (loggedIn && goingLogin) return '/';
+      if (!loggedIn && !goingLogin) return AppRoutes.login;
+      if (loggedIn && goingLogin) return AppRoutes.home;
       return null;
     },
     routes: [
-      GoRoute(path: '/login', builder: (_, __) => const LoginPage()),
-      GoRoute(path: '/', builder: (_, __) => const HomePage()),
+      GoRoute(path: AppRoutes.login, builder: (_, _) => const LoginPage()),
+      GoRoute(path: AppRoutes.home, builder: (_, _) => const HomePage()),
       GoRoute(
-        path: '/pengumuman/:id',
+        path: AppRoutes.announcementPattern,
         builder: (_, state) =>
             AnnouncementPage(id: state.pathParameters['id'] ?? ''),
       ),
