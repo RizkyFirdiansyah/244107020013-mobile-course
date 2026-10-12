@@ -58,9 +58,8 @@ Future<void> main() async {
   );
   if (!kIsWeb) {
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-    await initLocalNotifications();
-    await requestNotificationPermission();
-    await initFcmToken(
+    await pushService.requestPermission();
+    await pushService.initialize(
       onToken: (token) async {
         container.read(fcmTokenProvider.notifier).state = token;
         debugPrint('[FCM] token dikirim ke backend: ${maskToken(token)}');

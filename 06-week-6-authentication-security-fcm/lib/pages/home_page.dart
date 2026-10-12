@@ -43,7 +43,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   Future<void> _loadTokenPreview() async {
-    final preview = await getFcmTokenPreview();
+    final preview = await pushService.getTokenPreview();
     if (mounted) setState(() => _tokenPreview = preview);
   }
 
