@@ -15,8 +15,8 @@ const _channel = AndroidNotificationChannel(
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
-  // Notifikasi berisi notification payload ditampilkan oleh Android.
-  // Handler ini tetap diperlukan untuk data payload saat aplikasi background.
+  // Notification payload ditampilkan sistem. Navigasi dilakukan saat notifikasi
+  // diklik melalui onMessageOpenedApp atau getInitialMessage.
 }
 
 Future<bool> requestNotificationPermission() async {
@@ -49,8 +49,8 @@ Future<void> initLocalNotifications() async {
   );
 
   final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
-  _setDeepLinkFromMessage(initialMessage);
-  FirebaseMessaging.onMessageOpenedApp.listen(_setDeepLinkFromMessage);
+  _setRouteFromMessage(initialMessage);
+  FirebaseMessaging.onMessageOpenedApp.listen(_setRouteFromMessage);
 
   FirebaseMessaging.onMessage.listen((message) async {
     final notification = message.notification;
@@ -69,18 +69,23 @@ Future<void> initLocalNotifications() async {
         ),
         iOS: const DarwinNotificationDetails(),
       ),
-      payload: message.data['deep_link'] as String?,
+      payload: _routeFromData(message.data),
     );
   });
 }
 
 String? pendingDeepLink;
 
-void _setDeepLinkFromMessage(RemoteMessage? message) {
-  final deepLink = message?.data['deep_link'] as String?;
-  if (deepLink == null || deepLink.isEmpty) return;
-  pendingDeepLink = deepLink;
-  pendingDeepLinkNotifier.value = deepLink;
+String? _routeFromData(Map<String, dynamic> data) {
+  final route = data['route'] ?? data['deep_link'];
+  return route is String && route.isNotEmpty ? route : null;
+}
+
+void _setRouteFromMessage(RemoteMessage? message) {
+  final route = message == null ? null : _routeFromData(message.data);
+  if (route == null) return;
+  pendingDeepLink = route;
+  pendingDeepLinkNotifier.value = route;
 }
 
 Future<void> initFcmToken({
@@ -93,7 +98,12 @@ Future<void> initFcmToken({
   await FirebaseMessaging.instance.subscribeToTopic('pengumuman-kampus');
 }
 
+Future<void> unsubscribeFromAnnouncementsTopic() {
+  return FirebaseMessaging.instance.unsubscribeFromTopic('pengumuman-kampus');
+}
+
 Future<String?> getFcmTokenPreview() async {
+  if (kIsWeb) return null;
   final token = await FirebaseMessaging.instance.getToken();
   if (token == null) return null;
   final visibleLength = token.length < 12 ? token.length : 12;
