@@ -2,11 +2,9 @@
 
 Dokumentasi praktikum dan tugas minggu ke-3 mata kuliah Pemrograman Mobile. Repository ini berisi implementasi.
 
----
+## 1. Tujuan
 
-## 🎯 Tujuan
-
-Memahami dan melatih penggunaan widget tata letak dasar (`Container`, `Column`, `Row`, `Expanded`, `CircleAvatar`) serta mengamati perilaku ukuran dimensi (_constraints_) dan _overflow_ sebelum membangun dashboard responsif.
+Memahami konsep navigasi deklaratif menggunakan GoRouter, menerapkan manajemen state lintas halaman berbasis Riverpod (`Notifier`, `AsyncNotifier`, `AsyncValue`), memisahkan komponen antarmuka menjadi widget modular, serta memvalidasi kebenaran reaktivitas UI melalui pengujian widget otomatis (_widget testing_).
 
 ---
 
@@ -19,724 +17,242 @@ Memahami dan melatih penggunaan widget tata letak dasar (`Container`, `Column`, 
 
 ---
 
-## 1. Praktikum: Layout Sederhana (Warm-up)
+## 2. Langkah Praktikum
 
-Praktikum ini membuat kartu profil sederhana (_ProfileCard_) pada file `lib/main.dart` menggunakan kombinasi `Container`, `Column`, dan `Row`.
+### Inisialisasi Proyek & Dependensi
 
-### Kode Implementasi
+Proyek dikembangkan pada direktori `03-week-3-navigation-state-management` dengan menambahkan pustaka resmi `go_router` dan `flutter_riverpod`:
 
-```dart
-import 'package:flutter/material.dart';
-
-void main() => runApp(const ProfileApp());
-
-class ProfileApp extends StatelessWidget {
-  const ProfileApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: Scaffold(
-        body: Center(child: ProfileCard()),
-      ),
-    );
-  }
-}
-
-class ProfileCard extends StatelessWidget {
-  const ProfileCard({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 320,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.indigo.shade50,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              const CircleAvatar(child: Icon(Icons.person)),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text(
-                      'Nama Mahasiswa',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    Text('Muhammad Rizky Firdiansyah'),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          const Row(
-            children: [
-              Expanded(child: Text('NIM')),
-              Text('244107020013'),
-            ],
-          ),
-          const SizedBox(height: 6),
-          const Row(
-            children: [
-              Expanded(child: Text('Kelas')),
-              Text('TI-3E'),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
+```bash
+flutter pub add go_router flutter_riverpod
 ```
 
-![Tampilan Awal Kartu Profil](./screenshots/01-profile-card-awal.jpeg)
+### Struktur Direktori Kode Sumber
 
----
-
-### Hasil Eksperimen Warm-up
-
-1. **Eksperimen 1: Menghapus `Expanded` pada baris nama**
-   - Widget `Expanded` berfungsi untuk mengisi sisa ruang horizontal yang tersedia di dalam `Row`.
-   - Ketika `Expanded` dihapus, `Column` teks nama akan mengambil lebar menyesuaikan dengan lebar isi teks (child), sehingga teks nama yang panjang menyebabkan _layout overflow_.
-
-   ![Eksperimen 1: tanpa Expanded](./screenshots/02-eksperimen-overflow.jpeg)
-
-2. **Eksperimen 2: Mengganti `mainAxisSize: MainAxisSize.min` ke nilai default (`MainAxisSize.max`)**
-   - Secara default, nilai `mainAxisSize` pada `Column` adalah `MainAxisSize.max`.
-   - Ketika `mainAxisSize` diubah menjadi `MainAxisSize.max` (atau dihapus), kartu profil akan memanjang vertikal mengambil seluruh ruang tinggi layar yang tersedia. Sebaliknya, `MainAxisSize.min` membuat tinggi kartu menyesuaikan dengan isi konten.
-
-   ![Eksperimen 2: Column MainAxisSize Default](./screenshots/03-eksperimen-mainaxis.jpeg)
-
-3. **Eksperimen 3: Menambahkan satu baris data (Email) dengan pola `Row` + `Expanded`**
-   - Menambahkan baris email dengan pola `Row` + `Expanded(child: Text('Email'))` menghasilkan perataan yang konsisten: teks label `'Email'` mengambil ruang fleksibel di sisi kiri, dan nilai email berada di sisi kanan.
-   - Selain itu, membungkus nilai email dengan `Flexible` dan `overflow: TextOverflow.ellipsis` mencegah teks panjang meluap (_overflow_) melewati batas lebar kontainer kartu.
-
-   ![Eksperimen 3: Penambahan Baris Email](./screenshots/04-eksperimen-email.jpeg)
-
----
-
-## 3. Praktikum: Dashboard Responsif
-
-Praktikum ini membuat antarmuka dashboard responsif menggunakan widget `LayoutBuilder`, `GridView.count`, dan kartu metrik `DashboardCard`.
-
-### 1. Implementasi Awal: StatelessWidget & LayoutBuilder
-
-Pada tahap awal, `DashboardApp` dibangun sebagai `StatelessWidget`. Widget `LayoutBuilder` digunakan untuk membaca batasan lebar layar (`constraints.maxWidth`). Jika lebar layar mencapai atau melebihi 700 piksel (`maxWidth >= 700`), grid menampilkan 2 kolom; jika kurang dari 700 piksel, grid beralih otomatis menjadi 1 kolom.
-
-```dart
-import 'package:flutter/material.dart';
-
-void main() => runApp(const DashboardApp());
-
-class DashboardApp extends StatelessWidget {
-  const DashboardApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.indigo),
-      darkTheme: ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.dark,
-        colorSchemeSeed: Colors.indigo,
-      ),
-      themeMode: ThemeMode.system,
-      home: const DashboardPage(),
-    );
-  }
-}
-
-class DashboardPage extends StatelessWidget {
-  const DashboardPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Student Dashboard')),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final columns = constraints.maxWidth >= 700 ? 2 : 1;
-          return GridView.count(
-            padding: const EdgeInsets.all(16),
-            crossAxisCount: columns,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
-            childAspectRatio: 2.6,
-            children: const [
-              DashboardCard(title: 'Assignments', value: '8'),
-              DashboardCard(title: 'Attendance', value: '92%'),
-              DashboardCard(title: 'Portfolio', value: 'Ready'),
-              DashboardCard(title: 'Current week', value: '02'),
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-
-class DashboardCard extends StatelessWidget {
-  const DashboardCard({required this.title, required this.value, super.key});
-  final String title;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          children: [
-            Expanded(child: Text(title)),
-            Text(value, style: Theme.of(context).textTheme.headlineSmall),
-          ],
-        ),
-      ),
-    );
-  }
-}
+```text
+lib/
+├── main.dart
+├── app_router.dart
+├── pages/
+│   ├── detail_page.dart
+│   ├── home_page.dart
+│   ├── product_page.dart
+│   ├── stats_page.dart
+│   └── todo_page.dart
+├── providers/
+│   ├── product_provider.dart
+│   ├── stats_provider.dart
+│   └── todo_provider.dart
 ```
 
 ---
 
-### 2. Menambahkan Interaksi: StatefulWidget dan Cupertino
+## 3. Implementasi Aplikasi ToDo & Navigasi
 
-Aplikasi ditingkatkan menjadi `StatefulWidget` untuk menambahkan fitur interaktif pergantian tema terang dan gelap secara manual melalui komponen `CupertinoSwitch` pada `AppBar`.
+Aplikasi mengintegrasikan halaman daftar tugas (`TodoPage`) pada path `/` dan halaman statistik (`StatsPage`) pada path `/stats`, dengan navigasi tab bawah menggunakan `NavigationBar`. Praktikum juga mencakup contoh navigasi hierarkis dari halaman `HomePage` ke `DetailPage` menggunakan parameter path serta contoh halaman produk dengan state asinkron.
+
+### 1. Contoh Navigasi Home dan Detail
+
+`HomePage` menampilkan sepuluh item. Ketika item dipilih, aplikasi berpindah ke `DetailPage` menggunakan `context.go('/detail/:id')`. Parameter `id` dibaca melalui `state.pathParameters` dan ditampilkan pada halaman detail.
+
+![Halaman Home dengan Daftar Item](./screenshots/01-navigation-home.jpeg)
+
+![Halaman Detail Item 1](./screenshots/02-navigation-detail-item-1.png)
+
+### 2. Contoh State Asinkron Halaman Produk
+
+`ProductPage` mengamati `productsProvider` yang mengembalikan daftar produk setelah simulasi jeda jaringan. State `loading`, `error`, dan `data` ditangani menggunakan `AsyncValue.when`; state error menyediakan tombol **Coba lagi** untuk memanggil `ref.invalidate(productsProvider)`.
+
+![Halaman Produk dengan Data Berhasil](./screenshots/03-products-success.jpeg)
+
+![Halaman Produk Saat Terjadi Error](./screenshots/04-products-error.jpeg)
+
+### 3. Model & State Notifier
+
+Model `Todo` dibuat secara _immutable_ dilengkapi metode `copyWith`. Logika pengelolaan daftar tugas dienkapsulasi pada `TodoListNotifier`:
 
 ```dart
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
-
-void main() => runApp(const DashboardApp());
-
-class DashboardApp extends StatefulWidget {
-  const DashboardApp({super.key});
-
+class TodoListNotifier extends Notifier<List<Todo>> {
   @override
-  State<DashboardApp> createState() => _DashboardAppState();
-}
+  List<Todo> build() => const [];
 
-class _DashboardAppState extends State<DashboardApp> {
-  bool isDark = false;
+  void add(String title) => state = [...state, Todo(title)];
 
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.indigo),
-      darkTheme: ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.dark,
-        colorSchemeSeed: Colors.indigo,
-      ),
-      themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
-      home: DashboardPage(
-        isDark: isDark,
-        onDarkChanged: (value) => setState(() => isDark = value),
-      ),
-    );
+  void toggle(int index) {
+    final todos = [...state];
+    todos[index] = todos[index].copyWith(done: !todos[index].done);
+    state = todos;
   }
+
+  void remove(int index) => state = [...state]..removeAt(index);
 }
 
-class DashboardPage extends StatelessWidget {
-  const DashboardPage({
-    required this.isDark,
-    required this.onDarkChanged,
-    super.key,
-  });
-  final bool isDark;
-  final ValueChanged<bool> onDarkChanged;
+final todoListProvider =
+    NotifierProvider<TodoListNotifier, List<Todo>>(TodoListNotifier.new);
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Student Dashboard'),
-        actions: [
-          Row(
-            children: [
-              Icon(isDark ? Icons.dark_mode : Icons.light_mode),
-              const SizedBox(width: 4),
-              CupertinoSwitch(
-                value: isDark,
-                onChanged: onDarkChanged,
-              ),
-              const SizedBox(width: 12),
-            ],
-          ),
-        ],
-      ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final columns = constraints.maxWidth >= 700 ? 2 : 1;
-          return GridView.count(
-            padding: const EdgeInsets.all(16),
-            crossAxisCount: columns,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
-            childAspectRatio: 2.6,
-            children: const [
-              DashboardCard(title: 'Assignments', value: '8'),
-              DashboardCard(title: 'Attendance', value: '92%'),
-              DashboardCard(title: 'Portfolio', value: 'Ready'),
-              DashboardCard(title: 'Current week', value: '02'),
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-
-class DashboardCard extends StatelessWidget {
-  const DashboardCard({required this.title, required this.value, super.key});
-  final String title;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          children: [
-            Expanded(child: Text(title)),
-            Text(value, style: Theme.of(context).textTheme.headlineSmall),
-          ],
-        ),
-      ),
-    );
-  }
-}
+final uncompletedTodosProvider = Provider<List<Todo>>((ref) {
+  final todos = ref.watch(todoListProvider);
+  return todos.where((todo) => !todo.done).toList();
+});
 ```
 
----
+### 4. Deklarasi Router & Root Widget
 
-### Hasil Eksperimen Layout & Interaksi
-
-1. **Eksperimen 1: Perubahan Breakpoint Layar**
-   - Nilai breakpoint `constraints.maxWidth >= 700` menentukan responsivitas tampilan: layar sempit (kurang dari 700) akan menampilkan 1 kolom, sedangkan layar lebar (lebih dari 700) akan menampilkan 2 kolom.
-   - Mengubah nilai breakpoint ini menggeser batas kapan layout grid bertransisi secara dinamis.
-
-   ![Dashboard Responsif 1 Kolom](./screenshots/05-dashboard-1-kolom.jpeg)
-   ![Dashboard Responsif 2 Kolom](./screenshots/06-dashboard-2-kolom.jpeg)
-
-2. **Eksperimen 2: Perubahan ThemeMode & Penggunaan CupertinoSwitch**
-   - Komponen `CupertinoSwitch` dari package Cupertino terdapat toggle dengan style iOS.
-   - Perubahan state `isDark` mengubah properti `themeMode` secara state antara `ThemeMode.dark` dan `ThemeMode.light`.
-
-3. **Eksperimen 3: Pengujian Ukuran Layar Berbeda**
-   - Saat dijalankan pada emulator dengan orientasi atau resolusi yang berbeda, `LayoutBuilder` membaca batasan ruang secara langsung dan menyesuaikan layout kartu dashboard berdasarkan screen.
-
-   ![Dashboard orientasi sempit](./screenshots/07-dashboard-sempit.jpeg)
-   ![Dashboard orientasi lebar](./screenshots/08-dashboard-lebar.jpeg)
-
-4. **Eksperimen 4: Aksesibilitas Elemen UI**
-   - Elemen interaktif seperti toggle dark & light mode pada dashboard dapat dilengkapi label agar mudah dikenali oleh fitur aksesibilitas.
-
----
-
-## 4. Tugas Utama: Academic Overview
-
-Pada tugas utama ini, dashboard dikembangkan menjadi halaman **Academic Overview** lengkap yang memenuhi semua kriteria:
-
-1. **Header Profil Mahasiswa**:
-   - Menampilkan `CircleAvatar` profil, nama mahasiswa, serta informasi akademik.
-2. **Empat Kartu Informasi Akademik**:
-   - Menampilkan metrik akademik
-3. **Pemanfaatan Widget Inti**:
-   - Menggunakan `Row`, `Column`, `Expanded`, `Container`, dan `Card`.
-4. **Responsivitas Layar (Breakpoints)**:
-   - Menggunakan konstanta.
-   - Menampilkan **1 kolom** pada layar sempit (`constraints.maxWidth < 700`).
-   - Menampilkan **2 kolom** pada layar lebar (`constraints.maxWidth >= 700`).
-5. **Dukungan Light & Dark Theme**:
-   - Menggunakan `MaterialApp` dengan `theme` dan `darkTheme`.
-   - Menggunakan `CupertinoSwitch` di `AppBar` untuk mengubah tema.
-6. **Aksesibilitas (Accessibility / Semantics)**:
-   - Membungkus toggle tema dengan `Semantics(label: 'Toggle mode gelap')`.
-   - Membungkus setiap kartu metrik dengan `Semantics(label: '$title: $value')`.
-
-### Source Code Final (`lib/main.dart`)
+Aplikasi dibungkus dengan `ProviderScope` di level root dan memanfaatkan `MaterialApp.router`:
 
 ```dart
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
+void main() => runApp(const ProviderScope(child: MyApp()));
 
-void main() => runApp(const DashboardApp());
+final _router = GoRouter(
+  initialLocation: '/',
+  routes: [
+    GoRoute(
+      path: '/',
+      builder: (context, state) => const TodoPage(),
+    ),
+    GoRoute(
+      path: '/stats',
+      builder: (context, state) => const StatsPage(),
+    ),
+  ],
+);
 
-const kWideBreakpoint = 700;
-
-class DashboardApp extends StatefulWidget {
-  const DashboardApp({super.key});
-
-  @override
-  State<DashboardApp> createState() => _DashboardAppState();
-}
-
-class _DashboardAppState extends State<DashboardApp> {
-  bool isDark = false;
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Academic Overview',
+    return MaterialApp.router(
+      title: 'Week 3 - Navigation & State Management',
+      routerConfig: _router,
       theme: ThemeData(
-        useMaterial3: true,
         colorSchemeSeed: Colors.indigo,
-        brightness: Brightness.light,
-      ),
-      darkTheme: ThemeData(
         useMaterial3: true,
-        colorSchemeSeed: Colors.indigo,
-        brightness: Brightness.dark,
-      ),
-      themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
-      home: DashboardPage(
-        isDark: isDark,
-        onDarkChanged: (value) => setState(() => isDark = value),
-      ),
-    );
-  }
-}
-
-class DashboardPage extends StatelessWidget {
-  const DashboardPage({
-    required this.isDark,
-    required this.onDarkChanged,
-    super.key,
-  });
-  final bool isDark;
-  final ValueChanged<bool> onDarkChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Academic Overview'),
-        actions: [
-          Row(
-            children: [
-              Icon(
-                isDark ? Icons.dark_mode : Icons.light_mode,
-                color: theme.colorScheme.onSurface,
-              ),
-              const SizedBox(width: 8),
-              Semantics(
-                label: 'Toggle Dark Mode',
-                hint: 'Mengubah tema aplikasi antara terang dan gelap',
-                toggled: isDark,
-                child: Switch.adaptive(value: isDark, onChanged: onDarkChanged),
-              ),
-              const SizedBox(width: 12),
-            ],
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header Profil Mahasiswa
-            const ProfileHeader(),
-            const SizedBox(height: 20),
-
-            // Grid Responsif Kartu Informasi Academic
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final isWide = constraints.maxWidth >= kWideBreakpoint;
-                final columns = isWide ? 2 : 1;
-
-                return GridView.count(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: columns,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  childAspectRatio: isWide ? 2.8 : 2.4,
-                  children: const [
-                    InfoCard(
-                      title: 'SKS Ditempuh',
-                      value: '20 SKS',
-                      icon: Icons.school,
-                    ),
-                    InfoCard(
-                      title: 'IPK Kumulatif',
-                      value: '3.85',
-                      icon: Icons.grade,
-                    ),
-                    InfoCard(
-                      title: 'Kehadiran',
-                      value: '96%',
-                      icon: Icons.assignment_turned_in,
-                    ),
-                    InfoCard(
-                      title: 'Tugas Aktif',
-                      value: '3 Pending',
-                      icon: Icons.pending_actions,
-                    ),
-                  ],
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class ProfileHeader extends StatelessWidget {
-  const ProfileHeader({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Semantics(
-      label: 'Informasi Profil Mahasiswa',
-      container: true,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.primaryContainer,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 28,
-              backgroundColor: theme.colorScheme.primary,
-              child: Icon(
-                Icons.person,
-                color: theme.colorScheme.onPrimary,
-                size: 32,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Muhammad Rizky Firdiansyah',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.onPrimaryContainer,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'NIM: 244107020013 | Kelas: TI 3E',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onPrimaryContainer,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class InfoCard extends StatelessWidget {
-  const InfoCard({
-    required this.title,
-    required this.value,
-    required this.icon,
-    super.key,
-  });
-
-  final String title;
-  final String value;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Semantics(
-      label: '$title: $value',
-      container: true,
-      child: Card(
-        elevation: 1,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Icon(icon, size: 32, color: theme.colorScheme.primary),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      value,
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.onSurface,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
 }
 ```
 
-### Hasil Tampilan Academic Overview
+### 5. Halaman ToDo & Pemisahan TodoTile
 
-1. **Layar Sempit (< 700px, 1 Kolom)**:
-   - Seluruh kartu informasi tersusun vertikal dalam 1 kolom dengan rasio yang nyaman dibaca pada perangkat smartphone.
+Item tugas diekstrak ke dalam widget terpisah `TodoTile` (`lib/widgets/todo_tile.dart`). Halaman utama menampilkan teks `'Belum ada tugas'` jika daftar kosong, serta menyediakan dialog input untuk menambahkan tugas baru.
 
-   ![Academic Overview Layar Sempit](./screenshots/09-academic-overview-sempit.jpeg)
+![Tampilan Awal ToDo Kosong](./screenshots/05-todo-empty.jpeg)
 
-2. **Layar Lebar (>= 700px, 2 Kolom)**:
-   - Kartu informasi bertransisi secara otomatis menjadi layout grid 2 kolom pada layar tablet / desktop / landscape.
+![Daftar ToDo Setelah Tugas Ditambahkan](./screenshots/06-todo-with-task.jpeg)
 
-   ![Academic Overview Layar Lebar](./screenshots/10-academic-overview-lebar.jpeg)
+### 6. Halaman Statistik & Sinkronisasi Reaktif
 
-### Tantangan Refactoring yang Diselesaikan
+Halaman `StatsPage` membaca `statsProvider` yang terhubung langsung dengan `todoListProvider`. Data statistik tidak menggunakan data statis dummy:
 
-1. **Refactor Widget Reusable**:
-   - Kartu metrik disendirikan menjadi komponen independen `InfoCard` dengan parameter `title` dan `value`, menyederhanakan widget tree serta menghilangkan duplikasi kode (reduntant).
-2. **Standardisasi Tipografi & Warna**:
-   - Menggantikan hardcoded style dengan `Theme.of(context).textTheme` (`titleLarge`, `titleMedium`, `headlineSmall`) dan `Theme.of(context).colorScheme` (`primary`, `primaryContainer`, `onPrimary`) sehingga adaptasi tema light dan dark berjalan konsisten.
-3. **Konstanta Breakpoint Terisolasi**:
-   - Mendeklarasikan `const double kWideBreakpoint = 700;` di bagian atas agar mudah dikelola dan mudah ditemukan.
+- Jika daftar tugas kosong, `statsProvider` mengembalikan daftar kosong dan antarmuka menampilkan `'Belum ada data statistik'`.
+- Jika terdapat tugas, 3 metrik riil (`Total Tugas`, `Tugas Selesai`, `Tugas Belum Selesai`) dihitung secara dinamis dari `todoListProvider`.
+- Tiga kondisi antarmuka ditangani secara menyeluruh melalui `AsyncValue.when`:
 
-### Pengujian (Responsive Widget Test)
+1. **State Loading**: Menampilkan `CircularProgressIndicator` saat awal memuat data.
+2. **State Data Kosong**: Menampilkan pesan informatif bahwa belum ada data statistik tugas.
+3. **State Data (Success)**: Menampilkan 3 kartu/list metrik riil terhitung via `ListView.builder`.
+4. **State Error**: Menampilkan pesan kesalahan dan tombol _Coba lagi_ yang mengeksekusi `ref.invalidate(statsProvider)`.
 
-Pengujian diimplementasikan pada `test/widget_test.dart` menggunakan `tester.view.physicalSize` dan `tester.view.devicePixelRatio`:
+![Halaman Statistik State Success](./screenshots/07-stats-success.jpeg)
 
-Hasil eksekusi `flutter test`:
+### 7. Verifikasi Pengujian Terotomatisasi
 
-- Hasil Test: [11-test-results.png](./screenshots/11-test-results.png)
+Pengujian otomatis mencakup widget test dari instruksi jobsheet (`test/widget_test.dart`) serta unit test provider (`test/notifier_test.dart`):
 
----
+```bash
+flutter analyze
+flutter test
+```
 
-## 5. AI Prompt Challenge & Design Exploration
-
-### Challenge 1: Prompt Desain
-
-1. **Prompt**:
-
-   > _"Bandingkan dua tata letak dashboard akademik untuk Flutter: versi GridView dan versi LayoutBuilder + Column. Jelaskan trade-off responsif dan aksesibilitasnya."_
-
-2. **Respons**:
-   - `GridView`: Ideal untuk elemen kartu berukuran seragam. Pembagian kolom dinamis sangat mudah disesuaikan via crossAxisCount.
-   - `LayoutBuilder + Column`: Memberikan kontrol lebih besar jika terdapat elemen dengan ukuran tidak rata (seperti profil header) di dalam alur layout..
+![Bukti Eksekusi Test Lolos](./screenshots/08-test-results.png)
 
 ---
 
-### Challenge 2: Prompt Penguatan Konsep
+## 4. AI Prompt Challenge & Verification
 
-1. **Prompt**:
+### AI Prompt Challenge
 
-   > _"Jelaskan kapan penggunaan Expanded justru menyebabkan overflow di dalam Row, beri contoh kode yang gagal dan perbaikannya."_
+> _"Buatkan halaman Flutter bernama StatsPage menggunakan flutter_riverpod._
+> _Requirements:_
+> _- ConsumerWidget dengan satu AsyncNotifierProvider yang mensimulasikan pengambilan data statistik (delay 2 detik, kadang gagal 30%)._
+> _- UI harus menangani loading (spinner), error (pesan + tombol retry), dan success (ListView 3 item)._
+> _- Berikan unit test untuk notifier-nya._
+> _Jelaskan setiap bagian kode dalam komentar."_
 
-2. **Respons**:
-   - Expanded membutuhkan ruang yang terbatas (constrained width). Jika ditaruh di dalam Row yang berada di dalam SingleChildScrollView horizontal, Flutter akan melempar error unbounded constraints.
-   - **Contoh Kode Gagal**:
-     ```dart
-      SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-        children: [
-          Expanded(child: Text('Teks Panjang')), // Error Unbounded Width
-          ],
-        ),
-      )
-     ```
-   - **Contoh Kode Perbaikan**:
-     ```dart
-      SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-          //  Expanded dihapus, lebar akan otomatis menyesuaikan isi teks
-          Text('Teks Panjang'),
-          ],
-        ),
-      )
-     ```
----
+### Respons Awal AI
 
-### Challenge 3: Verification Prompt (Audit AI Mandiri)
+AI menghasilkan boilerplate `StatsPage` dengan `AsyncNotifierProvider` dan menangani ketiga state menggunakan `when()`. Namun, pada bagian dialog input tugas, AI tidak membersihkan controller sebelum menutup dialog, serta menggunakan flag acak yang menyulitkan pengujian deterministik pada unit test.
 
-1. **Prompt**:
+### Hasil & Verifikasi
 
-   > _"Periksa kembali rekomendasi layout di atas: apakah tetap responsif di bawah 600px, apakah mengurangi aksesibilitas, dan apakah ada widget yang tidak tersedia di Flutter stabil saat ini?"_
+1. **Output Penting**:
+   - `AsyncValue` memastikan seluruh status asinkron (loading, error, success) wajib ditangani secara eksplisit sehingga mencegah tampilan layar putih (_white screen_).
+   - `ref.watch` hanya digunakan di dalam metode `build`, sedangkan `ref.read` digunakan pada interaksi/callback tombol untuk menjaga efisiensi pembaruan tampilan.
+   - Pola immutability pada `Notifier` memastikan perubahan array memicu emisi state baru secara tepat.
 
-2. **Respons**:
-   - Responsivitas (< 600px): Teruji aman karena saat lebar layar < 700px, layout otomatis jatuh menjadi 1 kolom.
-   - Aksesibilitas: Komponen utama telah terbungkus Semantics (label, hint, toggled).
-   - Kestabilan Widget: Semua widget (Switch.adaptive, LayoutBuilder, Semantics, Material3 Theme) menggunakan SDK Flutter Stable resmi.
+2. **Keputusan yang Dipilih**:
+   - Menggunakan `AsyncNotifier` modern menggantikan pola `StateProvider` / `StateNotifierProvider` lama.
+   - Menambahkan kontrol flag simulasi kegagalan pada `StatsNotifier` agar pengujian unit test dan snapshot golden dapat dijalankan secara konsisten tanpa terganggu keacakan (_flaky test_).
+   - Memanggil `controller.clear()` sebelum menutup dialog via `Navigator.pop(context)` untuk menjamin integritas pengujian widget test single-frame.
+
+3. **Alasan Teknis**:
+   - Mencegah konflik widget finder pada `testWidgets` di mana `EditableText` dari dialog yang sedang bertransisi keluar masih membawa teks yang sama dengan item daftar yang baru ditambahkan.
+   - Menjaga kepatuhan 100% terhadap instruksi modul tanpa merubah satu baris pun kode pada `test/widget_test.dart`.
+
+4. **Bukti Verifikasi**:
+   - Analisis kode melalui `flutter analyze` menghasilkan 0 peringatan/error (_No issues found_).
+   - Pengujian terpadu melalui `flutter test` berhasil meluluskan 3 skenario uji secara sempurna (_All tests passed_).
 
 ---
 
-## 6. Refleksi Pembelajaran (Reflections)
+## 5. Refleksi Pembelajaran (Reflections)
 
-1. **Perbedaan Cara Berpikir Imperative dan Declarative saat Membangun UI**:
-   Dalam paradigma imperative (seperti Android XML/Java standar), developer mengubah UI secara manual langkah demi langkah saat terjadi event (setText(), setVisibility()). Sedangkan dalam paradigma declarative (seperti Flutter), UI dirancang sebagai cerminan dari state (UI = f(state)). Ketika state berubah, Flutter secara otomatis membangun kembali (rebuild) widget tree yang relevan.
+1. **Kapan setState Masih Cukup, dan Kapan State Harus Naik ke Riverpod**:
+   - `setState` masih cukup untuk state lokal satu widget yang tidak memengaruhi widget atau halaman lain, seperti membuka/menutup dialog atau input teks sementara dalam controller.
+   - State harus naik ke Riverpod saat data perlu dibagikan antar-halaman (seperti daftar ToDo yang dibaca pada halaman tugas dan halaman statistik), bertahan di luar daur hidup widget, atau membutuhkan pengujian unit terisolasi tanpa UI.
 
-2. **Kapan Expanded Membantu dan Kapan Menghasilkan Layout Error**:
-   Expanded sangat membantu ketika kita ingin widget fleksibel mengisi sisa ruang kosong pada Row atau Column. Namun, Expanded akan menghasilkan layout error (unbounded constraints) jika diletakkan di dalam widget yang memberikan ruang tak terbatas, seperti di dalam SingleChildScrollView dengan arah scroll yang sejajar.
+2. **Perbedaan `context.go` dan `context.push`, Serta Waktu Penggunaannya**:
+   - `context.go` mengganti rute aktif sesuai bagan path deklaratif (mengatur stack ke path target), sangat tepat digunakan untuk navigasi utama (seperti `NavigationBar`), deep link, atau redirect alur otentikasi.
+   - `context.push` menumpuk layar baru di atas stack navigasi yang sedang aktif, tepat digunakan untuk alur detail atau drill-down di mana pengguna dapat kembali ke halaman sebelumnya menggunakan tombol _back_.
 
-3. **Pengaruh Breakpoint dan Theme terhadap Pengalaman Pengguna (UX)**:
-   Breakpoint memastikan tata letak aplikasi tetap nyaman dipandang dan mudah diinteraksi baik pada perangkat layar kecil (smartphone) maupun layar besar (tablet/desktop) tanpa elemen yang terpotong. Pengaturan theme (Light/Dark Mode) yang konsisten meningkatkan aksesibilitas dan kenyamanan visual pengguna dalam berbagai kondisi pencahayaan.
+3. **Bagaimana `AsyncValue` Mencegah Bug Dibanding Tiga Boolean Terpisah**:
+   - Tiga boolean terpisah (`isLoading`, `hasError`, `isSuccess`) rentan menciptakan inkonsistensi state, seperti `isLoading` dan `hasError` bernilai `true` secara bersamaan yang dapat memicu tampilan antarmuka ganda atau layar putih.
+   - `AsyncValue` membungkus status asinkron ke dalam satu tipe _union_ yang saling eksklusif (loading, error, data). Fungsi `.when()` memastikan seluruh kemungkinan kondisi antarmuka wajib ditangani secara eksplisit.
 
-4. **Hal yang Diverifikasi dari Rekomendasi AI setelah Tugas Inti Selesai**:
-   Memastikan bahwa saran AI tidak menggunakan widget deprecated, kode mematuhi kaidah flutter analyze, tata letak tetap stabil pada layar di bawah 600px, serta widget Semantics terpasang dengan benar tanpa merusak fungsionalitas UI.
+4. **Bagian Hasil AI yang Diperbaiki dan Alasannya**:
+   - Menambahkan pembersihan input `controller.clear()` sebelum menutup dialog `Navigator.pop(context)` agar widget teks input tidak tertinggal di pohon antarmuka saat pengujian _single-frame_ widget test dijalankan, sehingga pengujian otomatis lulus 100%.
+   - Menyesuaikan arsitektur provider agar menggunakan `Notifier` dan `AsyncNotifier` versi Riverpod modern, menggantikan pola `StateProvider` yang sudah tidak disarankan.
 
 ---
 
-## 7. Jurnal Belajar (Learning Journal)
+## 6. Jurnal Belajar (Learning Journal)
 
 ### Ringkasan Teknis
 
-- **Widget Tree Composition**: Menggabungkan `Scaffold`, `AppBar`, `LayoutBuilder`, `Column`, `Container`, `Expanded`, `Card`, dan `GridView.count` untuk menyusun tata letak _Academic Overview_.
-- **Responsive Layout**: Menggunakan konstanta breakpoint `const double kWideBreakpoint = 700;` untuk mengatur jumlah kolom `GridView.count` secara dinamis (1 kolom vertikal vs 2 kolom grid).
-- **Theme Switching**: Menerapkan Material 3 `ThemeData` dengan `colorSchemeSeed: Colors.indigo`, mendukung transisi dinamis antara `ThemeMode.light` dan `ThemeMode.dark` melalui `CupertinoSwitch`.
-- **Aksesibilitas (Semantics)**: Membungkus switch tema dan kartu metrik dengan widget `Semantics` agar mudah diakses oleh pembaca layar.
-- **Automated Testing**: Menulis widget test responsif dengan memanipulasi ukuran layar virtual menggunakan `tester.view.physicalSize` dan `tester.view.devicePixelRatio`.
+- **Deklaratif Routing dengan GoRouter**: Mengonfigurasi `GoRouter` dan `MaterialApp.router` dengan rute `/` untuk daftar tugas dan `/stats` untuk halaman statistik, serta berpindah halaman menggunakan `NavigationBar`.
+- **Manajemen State Terpusat dengan Riverpod**: Membungkus root aplikasi dengan `ProviderScope`, mengelola daftar tugas secara _immutable_ menggunakan `TodoListNotifier` (`Notifier<List<Todo>>`), dan membuat provider turunan `uncompletedTodosProvider`.
+- **Komposisi Widget Reusable**: Memisahkan komponen item tugas ke dalam widget independen `TodoTile` untuk memperpendek metode `build` dan mempermudah pengujian.
+- **Penanganan State Asinkron**: Menggunakan `AsyncNotifier` dan `AsyncValue` untuk menangani siklus data asinkron secara aman melalui pola `.when(loading, error, data)` yang tersinkronisasi langsung dengan `todoListProvider` tanpa data dummy.
+- **Automated Testing**: Memvalidasi fungsionalitas penambahan tugas melalui widget test (`test/widget_test.dart`), pengujian logika state lewat unit test (`test/notifier_test.dart`), dan screenshot rendering (`test/golden_screenshot_test.dart`).
 
-## 8. Kesimpulan
+---
 
-Praktikum Minggu ke-2 berhasil menyelesaikan implementasi UI deklaratif dan responsive design:
+### Kendala yang Dihadapi & Solusi
 
-- Memahami konsep widget dasar layout (`Row`, `Column`, `Expanded`, `Container`) dan penanganan overflow constraint melalui latihan profil warm-up.
-- Mengimplementasikan dashboard responsif menggunakan `LayoutBuilder` dengan breakpoint adaptif.
-- Membangun halaman **Academic Overview** lengkap dengan header profil mahasiswa, 4 kartu metrik akademik, switch tema terang/gelap, dan label aksesibilitas `Semantics`.
-- Menyelesaikan tantangan refactoring dan audit pengujian otomatis responsif (`flutter test`) hingga lulus 100%.
+1. **Tampilan Simulasi Error Tidak Muncul pada Halaman Statistik**:
+   - Saat simulasi kegagalan 30% (maupun saat diuji dengan probabilitas lebih tinggi) terjadi pada `AsyncNotifier.build()`, antarmuka tetap tertahan pada indikator pemuatan (_loading spinner_) dan langsung berpindah ke tampilan sukses tanpa pernah menampilkan pesan error atau tombol _Coba lagi_.
+   - **Penyebab**: Fitur bawaan Riverpod 3 (`defaultRetry`) secara otomatis menjalankan percobaan ulang di latar belakang hingga 10 kali saat terjadi exception, sehingga status provider tertahan di `AsyncLoading(retrying: true)` dan salah satu percobaan ulang berhasil sebelum state error sempat dirender ke antarmuka.
+   - **Solusi**: Menambahkan parameter `retry: (_, _) => null` pada deklarasi `AsyncNotifierProvider` untuk menonaktifkan auto-retry latar belakang Riverpod 3, serta melakukan _Hot Restart_ agar state instance di memori ter-reset secara bersih.
+
+---
+
+## 7. Kesimpulan
+
+Praktikum Minggu 03 berhasil mengimplementasikan seluruh target pembelajaran arsitektur antarmuka mobile:
+
+- Mengintegrasikan navigasi deklaratif GoRouter multi-halaman dengan rute `/` dan `/stats` menggunakan `NavigationBar`.
+- Mengelola state global aplikasi ToDo secara terpusat dan _immutable_ menggunakan Riverpod `NotifierProvider` dan `Provider` filter turunan.
+- Mengimplementasikan penanganan siklus hidup data asinkron secara tangguh menggunakan `AsyncNotifier` dan `AsyncValue` pada halaman statistik.
+- Melakukan pemisahan komponen modular pada `TodoTile` serta menyelesaikan seluruh pengujian otomatis (`flutter analyze` dan `flutter test`) dengan tingkat kelulusan 100% tanpa modifikasi pada tes instruksi modul.
